@@ -3,30 +3,26 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>JSON → Dart (Freezed) Generator — Robust Fit</title>
+  <title>JSON → Dart (Freezed) Generator (Vanilla)</title>
   <style>
-    :root { --bg:#f8fafc; --card:#fff; --fg:#0f172a; --muted:#64748b; --border:#e2e8f0; --gap:16px; }
+    :root { --bg:#f8fafc; --card:#fff; --fg:#0f172a; --muted:#64748b; --border:#e2e8f0; }
     *{box-sizing:border-box}
-    html, body { height: 100%; }
     body{margin:0;background:var(--bg);color:var(--fg);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Helvetica Neue,Arial}
-    h1{font-weight:600;letter-spacing:.2px;margin:0}
-    .wrap{height:100vh;display:flex;flex-direction:column;overflow:hidden}
-    .page-pad{padding:12px}
-    .bar{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px var(--gap)}
-    .btn{border:1px solid var(--fg);background:var(--fg);color:#fff;border-radius:14px;padding:8px 14px;cursor:pointer;white-space:nowrap}
+    h1{font-weight:600;letter-spacing:.2px}
+    .wrap{max-width:1100px;margin:32px auto;padding:0 16px}
+    .bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+    .btn{border:1px solid var(--fg);background:var(--fg);color:#fff;border-radius:14px;padding:8px 14px;cursor:pointer}
     .btn.secondary{background:#fff;color:var(--fg);border:1px solid var(--border)}
-    .grid{flex:1 1 auto;min-height:0;display:grid;gap:var(--gap);padding:0 var(--gap) var(--gap)}
-    .grid{grid-template-columns:1fr}
-    @media(min-width:768px){.grid{grid-template-columns:5fr 3fr}}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;display:flex;flex-direction:column;min-height:0;padding:16px;gap:12px}
-    .section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;flex:0 0 auto}
+    .grid{display:grid;grid-template-columns:1fr;gap:16px}
+    @media(min-width:900px){.grid{grid-template-columns:1fr 1fr}}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px}
+    textarea{width:100%;height:420px;border:1px solid var(--border);border-radius:12px;padding:10px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;font-size:13px}
+    input[type=text],select{border:1px solid var(--border);border-radius:10px;padding:6px 10px;font-size:14px}
     .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
     .muted{color:var(--muted);font-size:12px}
-    input[type=text],select{border:1px solid var(--border);border-radius:10px;padding:6px 10px;font-size:14px}
-    textarea, pre{flex:1 1 auto;min-height:0;max-height:100%;overflow:auto}
-    textarea{border:1px solid var(--border);border-radius:12px;padding:12px;margin-top:4px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;font-size:13px}
-    pre{background:#0b1220;color:#e6edf3;border-radius:12px;border:1px solid #0b1220;padding:12px;font-size:12px;line-height:1.5;white-space:pre}
-    .footer{flex:0 0 auto;padding:8px var(--gap) 12px}
+    pre{background:#0b1220;color:#e6edf3;border-radius:12px;border:1px solid #0b1220;padding:12px;height:420px;overflow:auto;font-size:12px;line-height:1.5;white-space:pre}
+    .err{color:#b91c1c;font-size:13px;margin-top:8px}
+    .list{color:#a16207;font-size:13px;margin-top:8px}
   </style>
 </head>
 <body>
@@ -41,40 +37,35 @@
 
     <div class="grid">
       <section class="card">
-        <div class="section-head">
-          <div>
-            <div style="font-weight:600">Input JSON</div>
-            <div class="muted">Nullability</div>
-          </div>
-          <div class="row" style="align-items:flex-start">
+        <div class="row" style="justify-content:space-between;margin-bottom:8px">
+          <label><strong>Input JSON</strong></label>
+          <div class="row">
+            <span class="muted">Nullability</span>
             <select id="mode">
               <option value="all_nullable">All nullable (?)</option>
               <option value="smart">Smart (infer)</option>
             </select>
-            <label class="row" style="user-select:none">
-              <input id="includeJson" type="checkbox" checked style="margin-right:6px">
-              include fromJson/toJson
-            </label>
+            <label class="row"><input id="includeJson" type="checkbox" checked style="margin-right:6px">include fromJson/toJson</label>
           </div>
         </div>
         <textarea id="json"></textarea>
-        <div id="error" class="muted" style="display:none;color:#b91c1c"></div>
-        <ul id="warnings" class="muted" style="margin:0;padding-left:18px"></ul>
+        <div id="error" class="err" style="display:none"></div>
+        <ul id="warnings" class="list"></ul>
       </section>
 
       <section class="card">
-        <div class="section-head">
+        <div class="row" style="justify-content:space-between;margin-bottom:8px">
           <div class="row">
-            <label for="root" style="font-weight:600">Root class</label>
+            <label for="root"><strong>Root class</strong></label>
             <input type="text" id="root" style="margin-left:8px;width:200px">
           </div>
-          <div class="muted">Adds <code>@JsonKey(fromJson: ...)</code> to every field • Freezed + json_serializable</div>
+          <div class="muted">Adds <code>@JsonKey</code> to every field • Freezed + json_serializable</div>
         </div>
         <pre id="code"></pre>
       </section>
     </div>
 
-    <div class="footer muted">After saving, run <code>flutter pub run build_runner build --delete-conflicting-outputs</code>.</div>
+    <p class="muted" style="margin-top:16px">After saving, run <code>flutter pub run build_runner build --delete-conflicting-outputs</code>.</p>
   </div>
 
 <script>
@@ -131,23 +122,25 @@ function makeUniqueName(base, used){
   return name;
 }
 
-// ===== Generator with safe fromJson converters for ALL fields =====
+// ===== Generator =====
 function generateClassesFromJson(jsonValue, rootNameRaw, opts){
   var classes = new Map();
   var warnings = [];
   var usedClassNames = new Set();
 
-  var helperNames = new Set();
-  var helperCode = [];
-  function addHelper(name, code){ if(!helperNames.has(name)){ helperNames.add(name); helperCode.push(code); } return name; }
-
-  function uniqueClassName(base){ var safeBase = sanitizeBaseClassName(base); return makeUniqueName(safeBase, usedClassNames); }
-  function ensureClass(name){ if(!classes.has(name)) classes.set(name, { name: name, fields: [] }); return classes.get(name); }
-
+  function uniqueClassName(base){
+    var safeBase = sanitizeBaseClassName(base);
+    return makeUniqueName(safeBase, usedClassNames);
+  }
+  function ensureClass(name){
+    if(!classes.has(name)) classes.set(name, { name: name, fields: [] });
+    return classes.get(name);
+  }
   function inferTypeForArray(arr, keyHint, ownerClass){
     if(arr.length===0) return { dart: "List<dynamic>" };
     var nonNulls = arr.filter(function(v){ return v!==null && v!==undefined; });
     if(nonNulls.length===0) return { dart: "List<dynamic>" };
+
     if(nonNulls.every(isPlainObject)){
       var childName = uniqueClassName(toPascalCase(singularize(keyHint)) || (ownerClass+"Item"));
       var child = ensureClass(childName);
@@ -172,7 +165,6 @@ function generateClassesFromJson(jsonValue, rootNameRaw, opts){
     if(nonNulls.every(function(v){return typeof v==="boolean"})) return { dart: "List<bool>" };
     return { dart: "List<dynamic>" };
   }
-
   function inferFieldSpec(originalKey, value, ownerClassName, usedFieldNames){
     var baseName = sanitizeFieldName(originalKey);
     var uniqueFieldName = makeUniqueName(baseName, usedFieldNames);
@@ -205,57 +197,26 @@ function generateClassesFromJson(jsonValue, rootNameRaw, opts){
     if(opts.allNullable) nullable = true;
     return { nameOriginal: originalKey, nameDart: uniqueFieldName, dartType: dartType, nullable: nullable };
   }
-
   function processRoot(value, rootName){
     var root = ensureClass(rootName);
     var used = new Set();
     if(Array.isArray(value)){
       warnings.push("Top-level JSON is an array; generated a wrapper model with a single list field.");
       var info = inferTypeForArray(value, singularize(rootName), rootName);
-      root.fields.push({ nameOriginal: toCamelCase(singularize(rootName)), nameDart: makeUniqueName(toCamelCase(singularize(rootName)), used), dartType: info.dart, nullable: true });
+      root.fields.push({
+        nameOriginal: toCamelCase(singularize(rootName)),
+        nameDart: makeUniqueName(toCamelCase(singularize(rootName)), used),
+        dartType: info.dart,
+        nullable: true
+      });
     } else if(isPlainObject(value)){
-      Object.keys(value).forEach(function(k){ root.fields.push(inferFieldSpec(k, value[k], rootName, used)); });
+      Object.keys(value).forEach(function(k){
+        root.fields.push(inferFieldSpec(k, value[k], rootName, used));
+      });
     } else {
       warnings.push("Top-level JSON is a primitive; wrapping as a single dynamic field.");
       root.fields.push({ nameOriginal: "value", nameDart: makeUniqueName("value", used), dartType: "dynamic", nullable: true });
     }
-  }
-
-  function helperForType(dartType){
-    if(dartType==="String"){
-      return addHelper("_toStringOrNull","String? _toStringOrNull(Object? input) { return input is String ? input : null; }");
-    }
-    if(dartType==="bool"){
-      return addHelper("_toBoolOrNull","bool? _toBoolOrNull(Object? input) { return input is bool ? input : null; }");
-    }
-    if(dartType==="int"){
-      return addHelper("_toIntOrNull","int? _toIntOrNull(Object? input) { if (input is int) return input; return null; }");
-    }
-    if(dartType==="double"){
-      return addHelper("_toDoubleOrNull","double? _toDoubleOrNull(Object? input) { if (input is num) return input.toDouble(); return null; }");
-    }
-    if(dartType==="DateTime"){
-      return addHelper("_toDateTimeOrNull","DateTime? _toDateTimeOrNull(Object? input) { if (input is String) { try { return DateTime.parse(input); } catch (_) { return null; } } return null; }");
-    }
-    var m = /^List<(.+)>$/.exec(dartType);
-    if(m){
-      var inner = m[1];
-      if (!/^(String|bool|int|double|DateTime)$/.test(inner)) {
-        helperForType(inner);
-        var listHelperName = "_toListOf"+inner+"OrNull";
-        return addHelper(listHelperName,
-"List<"+inner+">? "+listHelperName+"(Object? input) {\n  if (input is List) {\n    final out = <"+inner+">[];\n    for (final e in input) {\n      final v = _to"+inner+"OrNull(e);\n      if (v == null) return null;\n      out.add(v);\n    }\n    return out;\n  }\n  return null;\n}");
-      } else {
-        var innerHelper = helperForType(inner);
-        var listHelper = "_toListOf"+inner+"OrNull";
-        return addHelper(listHelper,
-"List<"+inner+">? "+listHelper+"(Object? input) {\n  if (input is List) {\n    final out = <"+inner+">[];\n    for (final e in input) {\n      final v = "+innerHelper+"(e);\n      if (v == null) return null;\n      out.add(v);\n    }\n    return out;\n  }\n  return null;\n}");
-      }
-    }
-    var className = dartType;
-    var helperName = "_to"+className+"OrNull";
-    return addHelper(helperName,
-className+"? "+helperName+"(Object? input) {\n  if (input is Map<String, Object?>) return "+className+".fromJson(input);\n  if (input is Map<String, dynamic>) return "+className+".fromJson(input.map((k, v) => MapEntry(k as String, v)));\n  return null;\n}");
   }
 
   var rootName = uniqueClassName(rootNameRaw);
@@ -271,8 +232,7 @@ className+"? "+helperName+"(Object? input) {\n  if (input is Map<String, Object?
   var blocks = [];
   classes.forEach(function(cls){
     var params = cls.fields.map(function(f){
-      var fromJsonFn = helperForType(f.dartType);
-      return "    @JsonKey(name: '"+f.nameOriginal+"', fromJson: "+fromJsonFn+") "+f.dartType+(f.nullable ? "?" : "")+" "+f.nameDart+",";
+      return "    @JsonKey(name: '"+f.nameOriginal+"') "+f.dartType+(f.nullable ? "?" : "")+" "+f.nameDart+",";
     }).join("\n");
     var ctor = "  const factory "+cls.name+"({\n"+params+"\n  }) = _"+cls.name+";";
     var jsonFactory = opts.includeFromToJson ? ("\n\n  factory "+cls.name+".fromJson(Map<String, Object?> json) => _$"+cls.name+"FromJson(json);") : "";
@@ -280,10 +240,7 @@ className+"? "+helperName+"(Object? input) {\n  if (input is Map<String, Object?
     blocks.push(block);
   });
 
-  var helpersJoined = "";
-  if (helperCode.length){ helpersJoined = "\n\n// ---- Safe fromJson helpers (auto-generated) ----\n" + helperCode.join("\n\n"); }
-
-  return { code: [header].concat(blocks).join("\n\n") + helpersJoined, warnings: warnings };
+  return { code: [header].concat(blocks).join("\n\n"), warnings: warnings };
 }
 
 // ===== Page logic =====
@@ -304,8 +261,7 @@ jsonTA.value = JSON.stringify({
   created_at: "2024-12-31T10:15:30Z",
   tags: ["pro","vip"],
   preferences: { theme: "dark", notifications: { email: true, sms: null } },
-  friends: [{ id:1, name:"Alice" }, { id:2, name:"Bob" }],
-  is_sms: ""
+  friends: [{ id:1, name:"Alice" }, { id:2, name:"Bob" }]
 }, null, 2);
 
 rootInput.value = "UserModel";
